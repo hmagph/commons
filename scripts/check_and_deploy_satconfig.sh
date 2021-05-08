@@ -185,7 +185,7 @@ echo "DEPLOYING using SATELLITE CONFIG"
 set -x
 ibmcloud sat config version create --name $SOURCE_BUILD_NUMBER --config test --file-format yaml --read-config ${DEPLOYMENT_FILE}
 
-ibmcloud sat subscription create --group phsatcon --config test --name foo --version $IMAGE_TAG
+ibmcloud sat subscription create --group phsatcon --config test --name foo --version $SOURCE_BUILD_NUMBER
 
 # kubectl apply --namespace ${CLUSTER_NAMESPACE} -f ${DEPLOYMENT_FILE} 
 # set +x
