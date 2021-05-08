@@ -149,7 +149,7 @@ if [ -z "$DEPLOYMENT_DOC_INDEX" ]; then
 fi
 # Update deployment with image name
 yq write $DEPLOYMENT_FILE --doc $DEPLOYMENT_DOC_INDEX "spec.template.spec.containers[0].image" "${REGISTRY_URL}/${REGISTRY_NAMESPACE}/${IMAGE_NAME}:${IMAGE_TAG}" > ${NEW_DEPLOYMENT_FILE}
-yq write --doc "*" ${NEW_DEPLOYMENT_FILE} metadata.namespace ${CLUSTER_NAMESPACE}
+yq write --doc "*" ${NEW_DEPLOYMENT_FILE} metadata.namespace ${CLUSTER_NAMESPACE} > ${NEW_DEPLOYMENT_FILE}
 DEPLOYMENT_FILE=${NEW_DEPLOYMENT_FILE} # use modified file
 cat ${DEPLOYMENT_FILE}
 
