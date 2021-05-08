@@ -181,8 +181,12 @@ if [ ! -z "${CLUSTER_INGRESS_SUBDOMAIN}" ]; then
 fi
 
 echo "=========================================================="
-echo "DEPLOYING using manifest"
+echo "DEPLOYING using SATELLITE CONFIG"
 set -x
+ibmcloud sat config version create --name $SOURCE_BUILD_NUMBER --config test --file-format yaml --read-config ${DEPLOYMENT_FILE}
+
+ibmcloud sat subscription create --group phsatcon --config test --name foo --version $IMAGE_TAG
+
 # kubectl apply --namespace ${CLUSTER_NAMESPACE} -f ${DEPLOYMENT_FILE} 
 # set +x
 # Extract name from actual Kube deployment resource owning the deployed container image 
@@ -191,9 +195,9 @@ set -x
 # us.icr.io/sample/hello-containers-20190823092122682:1-master-a15bd262-20190823100927
 # or
 # us.icr.io/sample/hello-containers-20190823092122682:1-master-a15bd262-20190823100927@sha256:9b56a4cee384fa0e9939eee5c6c0d9912e52d63f44fa74d1f93f3496db773b2e
-DEPLOYMENT_NAME=$(kubectl get deploy --namespace ${CLUSTER_NAMESPACE} -o json | jq -r '.items[] | select(.spec.template.spec.containers[]?.image | test("'"${IMAGE_REPOSITORY}:${IMAGE_TAG}"'(@.+|$)")) | .metadata.name' )
-echo -e "CHECKING deployment rollout of ${DEPLOYMENT_NAME}"
-echo ""
+# DEPLOYMENT_NAME=$(kubectl get deploy --namespace ${CLUSTER_NAMESPACE} -o json | jq -r '.items[] | select(.spec.template.spec.containers[]?.image | test("'"${IMAGE_REPOSITORY}:${IMAGE_TAG}"'(@.+|$)")) | .metadata.name' )
+# echo -e "CHECKING deployment rollout of ${DEPLOYMENT_NAME}"
+# echo ""
 set -x
 # if kubectl rollout status deploy/${DEPLOYMENT_NAME} --watch=true --timeout=${ROLLOUT_TIMEOUT:-"150s"} --namespace ${CLUSTER_NAMESPACE}; then
   STATUS="pass"
