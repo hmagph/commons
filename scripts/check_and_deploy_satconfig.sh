@@ -76,7 +76,7 @@ if [ -z "${EXISTING_SUB}" ]; then
 # if ! ibmcloud sat subscription get --subscription "$SUBSCRIPTION_NAME" &>/dev/null ; then
   ibmcloud sat subscription create --name "$SUBSCRIPTION_NAME" --group "$CLUSTER_GROUP" --version "$VERSION_NAME" --config "$CONFIG_NAME"
 else
-  ibmcloud sat subscription update --subscription "$SUBSCRIPTION_NAME" --group "$CLUSTER_GROUP" --version "$VERSION_NAME"
+  ibmcloud sat subscription update --subscription "$SUBSCRIPTION_NAME" -f --group "$CLUSTER_GROUP" --version "$VERSION_NAME"
 fi
 
 
