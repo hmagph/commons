@@ -60,10 +60,10 @@ set -x
 CLUSTER_GROUP=phsatcon
 
 CONFIG_NAME="ibmcloud-toolchain-${PIPELINE_TOOLCHAIN_ID}"
-SUBSCRIPTION_NAME="$CONFIG_NAME:$CLUSTER_GROUP"
-VERSION_NAME="#$SOURCE_BUILD_NUMBER:"$(date -u "+%Y%m%d%H%M%S")
+SUBSCRIPTION_NAME="$CONFIG_NAME-$CLUSTER_GROUP"
+VERSION_NAME="$SOURCE_BUILD_NUMBER-"$(date -u "+%Y%m%d%H%M%S") # should only contain alphabets, numbers, underscore and hyphen
 
-if ! ibmcloud sat config get --config "$CONFIG_NAME" $>/dev/null ; then
+if ! ibmcloud sat config get --config "$CONFIG_NAME" &>/dev/null ; then
   ibmcloud sat config create --name "$CONFIG_NAME"
 fi
 
@@ -73,7 +73,7 @@ ibmcloud sat config version create --name "$VERSION_NAME" --config "$CONFIG_NAME
 # Create or update subscription
 EXISTING_SUB=$(ibmcloud sat subscription ls | awk '{ print $1 }' | grep "$SUBSCRIPTION_NAME")
 if [ -z "${EXISTING_SUB}" ]; then
-# if ! ibmcloud sat subscription get --subscription "$SUBSCRIPTION_NAME" $>/dev/null ; then
+# if ! ibmcloud sat subscription get --subscription "$SUBSCRIPTION_NAME" &>/dev/null ; then
   ibmcloud sat subscription create --name "$SUBSCRIPTION_NAME" --group "$CLUSTER_GROUP" --version "$VERSION_NAME" --config "$CONFIG_NAME"
 else
   ibmcloud sat subscription update --name "$SUBSCRIPTION_NAME" --group "$CLUSTER_GROUP" --version "$VERSION_NAME"
