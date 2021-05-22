@@ -6,13 +6,7 @@ echo "IMAGE_TAG=${IMAGE_TAG}"
 echo "REGISTRY_URL=${REGISTRY_URL}"
 echo "REGISTRY_NAMESPACE=${REGISTRY_NAMESPACE}"
 echo "DEPLOYMENT_FILE=${DEPLOYMENT_FILE}"
-echo "USE_ISTIO_GATEWAY=${USE_ISTIO_GATEWAY}"
 echo "KUBERNETES_SERVICE_ACCOUNT_NAME=${KUBERNETES_SERVICE_ACCOUNT_NAME}"
-
-echo "Use for custom Kubernetes cluster target:"
-echo "KUBERNETES_MASTER_ADDRESS=${KUBERNETES_MASTER_ADDRESS}"
-echo "KUBERNETES_MASTER_PORT=${KUBERNETES_MASTER_PORT}"
-echo "KUBERNETES_SERVICE_ACCOUNT_TOKEN=${KUBERNETES_SERVICE_ACCOUNT_TOKEN}"
 
 # View build properties
 if [ -f build.properties ]; then 
@@ -27,7 +21,10 @@ fi
 
 # Input env variables from pipeline job
 echo "CLUSTER_NAMESPACE=${CLUSTER_NAMESPACE}"
-echo "CLUSTER_GROUP=${CLUSTER_GROUP}"
+echo "SATELLITE_CLUSTER_GROUP=${SATELLITE_CLUSTER_GROUP}"
+echo "SATELLITE_CONFIG=${SATELLITE_CONFIG}"
+echo "SATELLITE_SUBSCRIPTION=${SATELLITE_SUBSCRIPTION}"
+echo "SATELLITE_CONFIG_VERSION=${SATELLITE_CONFIG_VERSION}"
 
 echo "=========================================================="
 echo "CHECKING DEPLOYMENT.YML manifest"
@@ -57,24 +54,30 @@ cat ${DEPLOYMENT_FILE}
 echo "=========================================================="
 echo "DEPLOYING using SATELLITE CONFIG"
 set -x
-CONFIG_NAME="ibmcloud-toolchain-${PIPELINE_TOOLCHAIN_ID}"
-SUBSCRIPTION_NAME="$CONFIG_NAME-$CLUSTER_GROUP"
-VERSION_NAME="$SOURCE_BUILD_NUMBER-"$(date -u "+%Y%m%d%H%M%S") # should only contain alphabets, numbers, underscore and hyphen
+if [ -z "${SATELLITE_CONFIG}" ]; then
+  export SATELLITE_CONFIG="ibmcloud-toolchain-${PIPELINE_TOOLCHAIN_ID}"
+fi
+if [ -z "${SATELLITE_SUBSCRIPTION}" ]; then
+  export SATELLITE_SUBSCRIPTION="$SATELLITE_CONFIG-$SATELLITE_CLUSTER_GROUP"
+fi
+if [ -z "${SATELLITE_CONFIG_VERSION}" ]; then
+  export SATELLITE_CONFIG_VERSION="$SOURCE_BUILD_NUMBER-"$(date -u "+%Y%m%d%H%M%S") # should only contain alphabets, numbers, underscore and hyphen
+fi
 
-if ! ibmcloud sat config get --config "$CONFIG_NAME" &>/dev/null ; then
-  ibmcloud sat config create --name "$CONFIG_NAME"
+if ! ibmcloud sat config get --config "$SATELLITE_CONFIG" &>/dev/null ; then
+  ibmcloud sat config create --name "$SATELLITE_CONFIG"
 fi
 
 # Create new resource version
-ibmcloud sat config version create --name "$VERSION_NAME" --config "$CONFIG_NAME" --file-format yaml --read-config ${DEPLOYMENT_FILE}
+ibmcloud sat config version create --name "$SATELLITE_CONFIG_VERSION" --config "$SATELLITE_CONFIG" --file-format yaml --read-config ${DEPLOYMENT_FILE}
 
 # Create or update subscription
-EXISTING_SUB=$(ibmcloud sat subscription ls | awk '{ print $1 }' | grep "$SUBSCRIPTION_NAME")
+EXISTING_SUB=$(ibmcloud sat subscription ls | awk '{ print $1 }' | grep "$SATELLITE_SUBSCRIPTION")
 if [ -z "${EXISTING_SUB}" ]; then
-# if ! ibmcloud sat subscription get --subscription "$SUBSCRIPTION_NAME" &>/dev/null ; then
-  ibmcloud sat subscription create --name "$SUBSCRIPTION_NAME" --group "$CLUSTER_GROUP" --version "$VERSION_NAME" --config "$CONFIG_NAME"
+# if ! ibmcloud sat subscription get --subscription "$SATELLITE_SUBSCRIPTION" &>/dev/null ; then
+  ibmcloud sat subscription create --name "$SATELLITE_SUBSCRIPTION" --group "$SATELLITE_CLUSTER_GROUP" --version "$SATELLITE_CONFIG_VERSION" --config "$SATELLITE_CONFIG"
 else
-  ibmcloud sat subscription update --subscription "$SUBSCRIPTION_NAME" -f --group "$CLUSTER_GROUP" --version "$VERSION_NAME"
+  ibmcloud sat subscription update --subscription "$SATELLITE_SUBSCRIPTION" -f --group "$SATELLITE_CLUSTER_GROUP" --version "$SATELLITE_CONFIG_VERSION"
 fi
 
 
@@ -94,11 +97,7 @@ set -x
 
 # Record deploy information
 if jq -e '.services[] | select(.service_id=="draservicebroker")' _toolchain.json > /dev/null 2>&1; then
-  if [ -z "${KUBERNETES_MASTER_ADDRESS}" ]; then
-    DEPLOYMENT_ENVIRONMENT="${PIPELINE_KUBERNETES_CLUSTER_NAME}:${CLUSTER_NAMESPACE}"
-  else 
-    DEPLOYMENT_ENVIRONMENT="${KUBERNETES_MASTER_ADDRESS}:${CLUSTER_NAMESPACE}"
-  fi
+  DEPLOYMENT_ENVIRONMENT="${SATELLITE_CLUSTER_GROUP}:${CLUSTER_NAMESPACE}"
   ibmcloud doi publishdeployrecord --env $DEPLOYMENT_ENVIRONMENT \
     --buildnumber ${SOURCE_BUILD_NUMBER} --logicalappname="${APP_NAME:-$IMAGE_NAME}" --status ${STATUS}
 fi
