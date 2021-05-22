@@ -54,6 +54,10 @@ cat ${DEPLOYMENT_FILE}
 echo "=========================================================="
 echo "DEPLOYING using SATELLITE CONFIG"
 set -x
+
+ic plugin list
+ic plugin update kubernetes-service -f
+
 if [ -z "${SATELLITE_CONFIG}" ]; then
   export SATELLITE_CONFIG="ibmcloud-toolchain-${PIPELINE_TOOLCHAIN_ID}"
 fi
