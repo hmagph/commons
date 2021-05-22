@@ -26,8 +26,8 @@ fi
 # https://cloud.ibm.com/docs/services/ContinuousDelivery/pipeline_deploy_var.html#deliverypipeline_environment
 
 # Input env variables from pipeline job
-echo "PIPELINE_KUBERNETES_CLUSTER_NAME=${PIPELINE_KUBERNETES_CLUSTER_NAME}"
 echo "CLUSTER_NAMESPACE=${CLUSTER_NAMESPACE}"
+echo "CLUSTER_GROUP=${CLUSTER_GROUP}"
 
 echo "=========================================================="
 echo "CHECKING DEPLOYMENT.YML manifest"
@@ -57,8 +57,6 @@ cat ${DEPLOYMENT_FILE}
 echo "=========================================================="
 echo "DEPLOYING using SATELLITE CONFIG"
 set -x
-CLUSTER_GROUP=phsatcon
-
 CONFIG_NAME="ibmcloud-toolchain-${PIPELINE_TOOLCHAIN_ID}"
 SUBSCRIPTION_NAME="$CONFIG_NAME-$CLUSTER_GROUP"
 VERSION_NAME="$SOURCE_BUILD_NUMBER-"$(date -u "+%Y%m%d%H%M%S") # should only contain alphabets, numbers, underscore and hyphen
