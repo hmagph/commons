@@ -76,7 +76,7 @@ fi
 ibmcloud sat config version create --name "$SATELLITE_CONFIG_VERSION" --config "$SATELLITE_CONFIG" --file-format yaml --read-config ${DEPLOYMENT_FILE}
 
 # Create or update subscription
-EXISTING_SUB=$(ibmcloud sat subscription ls -q | grep "$SATELLITE_SUBSCRIPTION")
+EXISTING_SUB=$(ibmcloud sat subscription ls -q | { grep "$SATELLITE_SUBSCRIPTION" || true })
 if [ -z "${EXISTING_SUB}" ]; then
 # if ! ibmcloud sat subscription get --subscription "$SATELLITE_SUBSCRIPTION" &>/dev/null ; then
   ibmcloud sat subscription create --name "$SATELLITE_SUBSCRIPTION" --group "$SATELLITE_CLUSTER_GROUP" --version "$SATELLITE_CONFIG_VERSION" --config "$SATELLITE_CONFIG"
