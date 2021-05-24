@@ -84,8 +84,18 @@ else
   ibmcloud sat subscription update --subscription "$SATELLITE_SUBSCRIPTION" -f --group "$SATELLITE_CLUSTER_GROUP" --version "$SATELLITE_CONFIG_VERSION"
 fi
 
+echo -e "CHECKING deployment rollout"
+set -x
+ibmcloud sat subscription get --subscription "$SATELLITE_SUBSCRIPTION"
+ibmcloud sat config get --config "$SATELLITE_CONFIG"
+ibmcloud sat config version get --config "$SATELLITE_CONFIG" --version "$SATELLITE_CONFIG_VERSION"
+ibmcloud sat config version get --config "$SATELLITE_CONFIG" --version "$SATELLITE_CONFIG_VERSION" --save-config 
 
-# echo -e "CHECKING deployment rollout of ${DEPLOYMENT_NAME}"
+ibmcloud sat resource ls --subscription $SATELLITE_SUBSCRIPTION
+# TODO wait until resources have been updated with timestamp > version creation time 
+# TODO check status of all deployed resources in subscription -- if all good then success
+set +x
+
 # echo ""
 set -x
 # if kubectl rollout status deploy/${DEPLOYMENT_NAME} --watch=true --timeout=${ROLLOUT_TIMEOUT:-"150s"} --namespace ${CLUSTER_NAMESPACE}; then
