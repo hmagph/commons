@@ -47,13 +47,15 @@ if ! ic sat config version get --config "$SATELLITE_CONFIG_ACCOUNT" --version "$
   fi
   export REGISTRY_AUTH=$(echo "{\"auths\":{\"${REGISTRY_URL}\":{\"auth\":\"$(echo iamapikey:${PIPELINE_BLUEMIX_API_KEY} | base64 -w 0)\"}}}" | base64 -w 0)
   echo "REGISTRY_AUTH=${REGISTRY_AUTH}"
-  ACCOUNT_FILE="${SATELLITE_CONFIG_ACCOUNT}.yaml"
+  ACCOUNT_FILE="${SATELLITE_CONFIG_ACCOUNT}.yaml"    
   cat > ${ACCOUNT_FILE} << EOF
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: ${KUBERNETES_SERVICE_ACCOUNT_NAME}
   namespace: ${CLUSTER_NAMESPACE}
+  labels:
+    razee/watch-resource: lite  
 imagePullSecrets:
   - name: ${IMAGE_PULL_SECRET_NAME}
 ---
@@ -62,6 +64,8 @@ kind: Secret
 metadata:
   name: ${IMAGE_PULL_SECRET_NAME}
   namespace: ${CLUSTER_NAMESPACE}
+  labels:
+    razee/watch-resource: lite  
 data:
   .dockerconfigjson: ${REGISTRY_AUTH}
 type: kubernetes.io/dockerconfigjson
