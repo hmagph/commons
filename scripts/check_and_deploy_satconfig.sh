@@ -58,11 +58,12 @@ imagePullSecrets:
 apiVersion: v1
 kind: Secret
 metadata:
-	name: registry-default-secret
+  name: ${IMAGE_PULL_SECRET_NAME}
 type: kubernetes.io/dockerconfigjson
 data:
-	.dockerconfigjson: $REGISTRY_AUTH
+  .dockerconfigjson: ${REGISTRY_AUTH}
 EOF
+  cat ${ACCOUNT_FILE}
   ibmcloud sat config version create --name "$SATELLITE_CONFIG_VERSION_ACCOUNT" --config "$SATELLITE_CONFIG_ACCOUNT" --file-format yaml --read-config ${ACCOUNT_FILE}
   # Create or update subscription
   EXISTING_SUB=$(ibmcloud sat subscription ls -q | grep "$SATELLITE_SUBSCRIPTION_ACCOUNT" || true)
