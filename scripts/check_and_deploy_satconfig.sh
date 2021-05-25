@@ -1,5 +1,5 @@
 #!/bin/bash
-
+set -x
 # Input env variables (can be received via a pipeline environment properties.file.
 echo "IMAGE_NAME=${IMAGE_NAME}"
 echo "IMAGE_TAG=${IMAGE_TAG}"
@@ -31,6 +31,52 @@ echo "CHECKING DEPLOYMENT.YML manifest"
 if [ -z "${DEPLOYMENT_FILE}" ]; then DEPLOYMENT_FILE=deployment.yml ; fi
 
 echo "=========================================================="
+echo -e "CONFIGURING ACCESS to private image registry from namespace ${CLUSTER_NAMESPACE}"
+KUBERNETES_SERVICE_ACCOUNT_NAME="ibmcloud-toolchain-${PIPELINE_TOOLCHAIN_ID}"
+IMAGE_PULL_SECRET_NAME="ibmcloud-toolchain-${PIPELINE_TOOLCHAIN_ID}-${REGISTRY_URL}"
+IMAGE_PULL_SECRET_SHA256=$(echo "${IMAGE_PULL_SECRET_NAME}${PIPELINE_BLUEMIX_API_KEY}" | sha256sum)
+echo "Image pull secret SHA256: $IMAGE_PULL_SECRET_SHA256"
+
+export SATELLITE_CONFIG_ACCOUNT="ibmcloud-toolchain-${PIPELINE_TOOLCHAIN_ID}-service-account"
+export SATELLITE_SUBSCRIPTION_ACCOUNT="$SATELLITE_CONFIG_ACCOUNT-$SATELLITE_CLUSTER_GROUP"
+export SATELLITE_CONFIG_VERSION_ACCOUNT="$IMAGE_PULL_SECRET_SHA256"
+if ! ic sat config version get --config "$SATELLITE_CONFIG_ACCOUNT" --version "$SATELLITE_CONFIG_VERSION_ACCOUNT" &>/dev/null; then
+  echo -e "Current image pull secret$ {IMAGE_PULL_SECRET_NAME} not found in ${CLUSTER_NAMESPACE}, creating it"
+  if ! ibmcloud sat config get --config "$SATELLITE_CONFIG" &>/dev/null ; then
+    ibmcloud sat config create --name "$SATELLITE_CONFIG"
+  fi
+  export REGISTRY_AUTH=$(echo "{\"auths\":{\"${REGISTRY_URL} \":{\"auth\":\"$(echo iamapikey:${PIPELINE_BLUEMIX_API_KEY} | base64)\"}}}" | base64)
+  ACCOUNT_FILE="${SATELLITE_CONFIG_ACCOUNT}.yaml"
+  cat > ${ACCOUNT_FILE} << EOF
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ${KUBERNETES_SERVICE_ACCOUNT_NAME}
+imagePullSecrets:
+  - name: ${IMAGE_PULL_SECRET_NAME}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+	name: registry-default-secret
+type: kubernetes.io/dockerconfigjson
+data:
+	.dockerconfigjson: $REGISTRY_AUTH
+EOF
+  ibmcloud sat config version create --name "$SATELLITE_CONFIG_VERSION_ACCOUNT" --config "$SATELLITE_CONFIG_ACCOUNT" --file-format yaml --read-config ${ACCOUNT_FILE}
+  # Create or update subscription
+  EXISTING_SUB=$(ibmcloud sat subscription ls -q | grep "$SATELLITE_SUBSCRIPTION_ACCOUNT" || true)
+  if [ -z "${EXISTING_SUB}" ]; then
+  # if ! ibmcloud sat subscription get --subscription "$SATELLITE_SUBSCRIPTION_ACCOUNT" &>/dev/null ; then
+    ibmcloud sat subscription create --name "$SATELLITE_SUBSCRIPTION_ACCOUNT" --group "$SATELLITE_CLUSTER_GROUP" --version "$SATELLITE_CONFIG_VERSION_ACCOUNT" --config "$SATELLITE_CONFIG_ACCOUNT"
+  else
+    ibmcloud sat subscription update --subscription "$SATELLITE_SUBSCRIPTION_ACCOUNT" -f --group "$SATELLITE_CLUSTER_GROUP" --version "$SATELLITE_CONFIG_VERSION_ACCOUNT"
+  fi
+else
+  echo -e "Current Image pull secret already found in ${CLUSTER_NAMESPACE}"
+fi
+
+echo "=========================================================="
 echo "UPDATING manifest with image information"
 IMAGE_REPOSITORY=${REGISTRY_URL}/${REGISTRY_NAMESPACE}/${IMAGE_NAME}
 echo -e "Updating ${DEPLOYMENT_FILE} with image name: ${IMAGE_REPOSITORY}:${IMAGE_TAG}"
@@ -41,14 +87,22 @@ if [ -z "$DEPLOYMENT_DOC_INDEX" ]; then
   echo "No Kubernetes Deployment definition found in $DEPLOYMENT_FILE. Updating YAML document with index 0"
   DEPLOYMENT_DOC_INDEX=0
 fi
-# Update deployment with image name
 cp ${DEPLOYMENT_FILE} ${NEW_DEPLOYMENT_FILE}
 DEPLOYMENT_FILE=${NEW_DEPLOYMENT_FILE} # use modified file
 yq write --inplace $DEPLOYMENT_FILE --doc $DEPLOYMENT_DOC_INDEX "spec.template.spec.containers[0].image" "${REGISTRY_URL}/${REGISTRY_NAMESPACE}/${IMAGE_NAME}@${IMAGE_MANIFEST_SHA}"
-# Set namespace in resource
+
+# Set namespace in resources
+echo -e "Updating ${DEPLOYMENT_FILE} with namespace: ${CLUSTER_NAMESPACE}"
 yq write --inplace $DEPLOYMENT_FILE --doc "*" "metadata.namespace" "${CLUSTER_NAMESPACE}"
-# Traceability for sat config
+
+# Traceability for sat config in resources
+echo -e "Updating ${DEPLOYMENT_FILE} with traceability label: metadata.labels.razee/watch-resource"
 yq write --inplace $DEPLOYMENT_FILE --doc "*" "metadata.labels.razee/watch-resource" "lite" 
+
+# Set serviceaccount in resources
+echo -e "Updating ${DEPLOYMENT_FILE} with namespace: ${SERVICE_ACCOUNT}"
+yq write --inplace $DEPLOYMENT_FILE --doc "*" "spec.template.spec.serviceAccountName" "${KUBERNETES_SERVICE_ACCOUNT_NAME}"
+
 cat ${DEPLOYMENT_FILE}
 
 echo "=========================================================="
@@ -59,7 +113,7 @@ ic plugin list
 ic plugin update kubernetes-service -f
 
 if [ -z "${SATELLITE_CONFIG}" ]; then
-  export SATELLITE_CONFIG="ibmcloud-toolchain-${PIPELINE_TOOLCHAIN_ID}"
+  export SATELLITE_CONFIG="ibmcloud-toolchain-${PIPELINE_TOOLCHAIN_ID}-resources"
 fi
 if [ -z "${SATELLITE_SUBSCRIPTION}" ]; then
   export SATELLITE_SUBSCRIPTION="$SATELLITE_CONFIG-$SATELLITE_CLUSTER_GROUP"
