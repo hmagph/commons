@@ -34,7 +34,7 @@ echo "=========================================================="
 echo -e "CONFIGURING ACCESS to private image registry from namespace ${CLUSTER_NAMESPACE}"
 KUBERNETES_SERVICE_ACCOUNT_NAME="ibmcloud-toolchain-${PIPELINE_TOOLCHAIN_ID}"
 IMAGE_PULL_SECRET_NAME="ibmcloud-toolchain-${PIPELINE_TOOLCHAIN_ID}-${REGISTRY_URL}"
-IMAGE_PULL_SECRET_SHA256=$(echo "${IMAGE_PULL_SECRET_NAME}${PIPELINE_BLUEMIX_API_KEY}" | sha256sum)
+IMAGE_PULL_SECRET_SHA256=$(printf "${IMAGE_PULL_SECRET_NAME}${PIPELINE_BLUEMIX_API_KEY}" | sha256sum)
 echo "Image pull secret SHA256: $IMAGE_PULL_SECRET_SHA256"
 
 export SATELLITE_CONFIG_ACCOUNT="ibmcloud-toolchain-${PIPELINE_TOOLCHAIN_ID}-service-account"
@@ -45,7 +45,7 @@ if ! ic sat config version get --config "$SATELLITE_CONFIG_ACCOUNT" --version "$
   if ! ibmcloud sat config get --config "$SATELLITE_CONFIG_ACCOUNT" &>/dev/null ; then
     ibmcloud sat config create --name "$SATELLITE_CONFIG_ACCOUNT"
   fi
-  export REGISTRY_AUTH=$(echo "{\"auths\":{\"${REGISTRY_URL} \":{\"auth\":\"$(echo iamapikey:${PIPELINE_BLUEMIX_API_KEY} | base64)\"}}}" | base64)
+  export REGISTRY_AUTH=$(echo "{\"auths\":{\"${REGISTRY_URL}\":{\"auth\":\"$(echo iamapikey:${PIPELINE_BLUEMIX_API_KEY} | base64)\"}}}" | base64)
   ACCOUNT_FILE="${SATELLITE_CONFIG_ACCOUNT}.yaml"
   cat > ${ACCOUNT_FILE} << EOF
 apiVersion: v1
@@ -68,8 +68,8 @@ EOF
   cat ${ACCOUNT_FILE}
   ibmcloud sat config version create --name "$SATELLITE_CONFIG_VERSION_ACCOUNT" --config "$SATELLITE_CONFIG_ACCOUNT" --file-format yaml --read-config ${ACCOUNT_FILE}
   # Create or update subscription
-  EXISTING_SUB=$(ibmcloud sat subscription ls -q | grep "$SATELLITE_SUBSCRIPTION_ACCOUNT" || true)
-  if [ -z "${EXISTING_SUB}" ]; then
+  EXISTING_SUB_ACCOUNT=$(ibmcloud sat subscription ls -q | grep "$SATELLITE_SUBSCRIPTION_ACCOUNT" || true)
+  if [ -z "${EXISTING_SUB_ACCOUNT}" ]; then
   # if ! ibmcloud sat subscription get --subscription "$SATELLITE_SUBSCRIPTION_ACCOUNT" &>/dev/null ; then
     ibmcloud sat subscription create --name "$SATELLITE_SUBSCRIPTION_ACCOUNT" --group "$SATELLITE_CLUSTER_GROUP" --version "$SATELLITE_CONFIG_VERSION_ACCOUNT" --config "$SATELLITE_CONFIG_ACCOUNT"
   else
