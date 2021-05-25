@@ -34,7 +34,7 @@ echo "=========================================================="
 echo -e "CONFIGURING ACCESS to private image registry from namespace ${CLUSTER_NAMESPACE}"
 KUBERNETES_SERVICE_ACCOUNT_NAME="ibmcloud-toolchain-${PIPELINE_TOOLCHAIN_ID}"
 IMAGE_PULL_SECRET_NAME="ibmcloud-toolchain-${PIPELINE_TOOLCHAIN_ID}-${REGISTRY_URL}"
-IMAGE_PULL_SECRET_SHA256=$(printf "${IMAGE_PULL_SECRET_NAME}${PIPELINE_BLUEMIX_API_KEY}" | sha256sum)
+IMAGE_PULL_SECRET_SHA256=$(printf `printf "${IMAGE_PULL_SECRET_NAME}${PIPELINE_BLUEMIX_API_KEY}" | sha256sum`)
 echo "Image pull secret SHA256: $IMAGE_PULL_SECRET_SHA256"
 
 export SATELLITE_CONFIG_ACCOUNT="ibmcloud-toolchain-${PIPELINE_TOOLCHAIN_ID}-service-account"
