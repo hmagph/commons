@@ -41,9 +41,9 @@ export SATELLITE_CONFIG_ACCOUNT="ibmcloud-toolchain-${PIPELINE_TOOLCHAIN_ID}-ser
 export SATELLITE_SUBSCRIPTION_ACCOUNT="$SATELLITE_CONFIG_ACCOUNT-$SATELLITE_CLUSTER_GROUP"
 export SATELLITE_CONFIG_VERSION_ACCOUNT="$IMAGE_PULL_SECRET_SHA256"
 if ! ic sat config version get --config "$SATELLITE_CONFIG_ACCOUNT" --version "$SATELLITE_CONFIG_VERSION_ACCOUNT" &>/dev/null; then
-  echo -e "Current image pull secret$ {IMAGE_PULL_SECRET_NAME} not found in ${CLUSTER_NAMESPACE}, creating it"
-  if ! ibmcloud sat config get --config "$SATELLITE_CONFIG" &>/dev/null ; then
-    ibmcloud sat config create --name "$SATELLITE_CONFIG"
+  echo -e "Current image pull secret$ ${IMAGE_PULL_SECRET_NAME} not found in ${CLUSTER_NAMESPACE}, creating it"
+  if ! ibmcloud sat config get --config "$SATELLITE_CONFIG_ACCOUNT" &>/dev/null ; then
+    ibmcloud sat config create --name "$SATELLITE_CONFIG_ACCOUNT"
   fi
   export REGISTRY_AUTH=$(echo "{\"auths\":{\"${REGISTRY_URL} \":{\"auth\":\"$(echo iamapikey:${PIPELINE_BLUEMIX_API_KEY} | base64)\"}}}" | base64)
   ACCOUNT_FILE="${SATELLITE_CONFIG_ACCOUNT}.yaml"
@@ -74,7 +74,7 @@ EOF
     ibmcloud sat subscription update --subscription "$SATELLITE_SUBSCRIPTION_ACCOUNT" -f --group "$SATELLITE_CLUSTER_GROUP" --version "$SATELLITE_CONFIG_VERSION_ACCOUNT"
   fi
 else
-  echo -e "Current Image pull secret already found in ${CLUSTER_NAMESPACE}"
+  echo -e "Current Image pull secret ${IMAGE_PULL_SECRET_NAME} already found in ${CLUSTER_NAMESPACE}"
 fi
 
 echo "=========================================================="
