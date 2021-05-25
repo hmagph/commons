@@ -64,7 +64,7 @@ metadata:
   namespace: ${CLUSTER_NAMESPACE}
 data:
   .dockerconfigjson: ${REGISTRY_AUTH}
-type: "kubernetes.io/dockerconfigjson"
+type: kubernetes.io/dockerconfigjson
 EOF
   cat ${ACCOUNT_FILE}
   ibmcloud sat config version create --name "$SATELLITE_CONFIG_VERSION_ACCOUNT" --config "$SATELLITE_CONFIG_ACCOUNT" --file-format yaml --read-config ${ACCOUNT_FILE}
