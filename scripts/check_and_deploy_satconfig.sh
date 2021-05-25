@@ -45,7 +45,7 @@ if ! ic sat config version get --config "$SATELLITE_CONFIG_ACCOUNT" --version "$
   if ! ibmcloud sat config get --config "$SATELLITE_CONFIG_ACCOUNT" &>/dev/null ; then
     ibmcloud sat config create --name "$SATELLITE_CONFIG_ACCOUNT"
   fi
-  export REGISTRY_AUTH=$(echo "{\"auths\":{\"${REGISTRY_URL}\":{\"auth\":\"$(echo -n iamapikey:${PIPELINE_BLUEMIX_API_KEY} | base64)\"}}}" | base64)
+  export REGISTRY_AUTH=$(echo "{\"auths\":{\"${REGISTRY_URL}\":{\"auth\":\"$(echo iamapikey:${PIPELINE_BLUEMIX_API_KEY} | base64 -w 0)\"}}}" | base64 -w 0)
   echo "REGISTRY_AUTH=${REGISTRY_AUTH}"
   ACCOUNT_FILE="${SATELLITE_CONFIG_ACCOUNT}.yaml"
   cat > ${ACCOUNT_FILE} << EOF
